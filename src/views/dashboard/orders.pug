@@ -1,0 +1,28 @@
+extends layout/index.pug
+
+block content
+    h2.mb-4 Orders
+    if orders.length === 0
+        p.text-muted No orders yet.
+    else
+        table.table.table-dark.table-striped
+            thead
+                tr
+                    th Order ID
+                    th Customer
+                    th Email
+                    th Address
+                    th Total
+                    th Status
+                    th Date
+            tbody
+                each order in orders
+                    tr
+                        td= order.id
+                        td= order.customer_name
+                        td= order.customer_email
+                        td= order.address + ', ' + order.city + ', ' + order.state
+                        td= '€' + order.total_amount
+                        td
+                            span.badge.badge-warning= order.status
+                        td= new Date(order.created_at).toLocaleDateString()
