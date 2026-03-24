@@ -61,6 +61,7 @@ app.get('/readiness', async (req, res) => {
 // Static files
 app.use(express.static(config.root));
 
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/',          require('./main.js'));
