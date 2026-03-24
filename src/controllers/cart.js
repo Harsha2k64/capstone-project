@@ -5,36 +5,37 @@ const config = require('../config/app-config.js');
 
 const controller = class CartController {
 
-  constructor() {
-    this.pool = new sql.ConnectionPool(config.sqlCon);
-    this.poolConnect = this.pool.connect();
-  }
-
   // 🟢 Get cart content
   async getContent(userId) {
-    await this.poolConnect;
+    const pool = await sql.connect(config.sqlCon);
 
-    const result = await this.pool.request()
-      .input('userId', sql.NVarChar(50), userId)
+    const result = await pool.request()
+      .input('userId', sql.Int, userId)
       .query('SELECT content FROM cart WHERE user_id = @userId');
 
     if (result.recordset.length === 0) {
       return { content: [] };
     }
 
-    return {
-      content: JSON.parse(result.recordset[0].content || '[]')
-    };
+    let content = result.recordset[0].content;
+
+    try {
+      content = content ? JSON.parse(content) : [];
+    } catch {
+      content = [];
+    }
+
+    return { content };
   }
 
   // 🟢 Add to cart
   async addToCart(newProducts, userId) {
-    await this.poolConnect;
+    const pool = await sql.connect(config.sqlCon);
 
     let cartData = await this.getContent(userId);
     let cartProducts = cartData.content;
 
-    // merge logic (same as your old logic)
+    // merge logic
     for (const cartProduct of cartProducts) {
       for (const newProduct of newProducts) {
         if (cartProduct.id == newProduct.id && cartProduct.size == newProduct.size) {
@@ -47,22 +48,20 @@ const controller = class CartController {
 
     const finalProducts = JSON.stringify(cartProducts.concat(newProducts));
 
-    // check if user exists
-    const check = await this.pool.request()
-      .input('userId', sql.NVarChar, userId)
+    // check if exists
+    const check = await pool.request()
+      .input('userId', sql.Int, userId)
       .query('SELECT user_id FROM cart WHERE user_id = @userId');
 
     if (check.recordset.length === 0) {
-      // insert
-      await this.pool.request()
-        .input('userId', sql.NVarChar, userId)
-        .input('content', sql.NVarChar, finalProducts)
+      await pool.request()
+        .input('userId', sql.Int, userId)
+        .input('content', sql.NVarChar(sql.MAX), finalProducts)
         .query('INSERT INTO cart (user_id, content) VALUES (@userId, @content)');
     } else {
-      // update
-      await this.pool.request()
-        .input('userId', sql.NVarChar, userId)
-        .input('content', sql.NVarChar, finalProducts)
+      await pool.request()
+        .input('userId', sql.Int, userId)
+        .input('content', sql.NVarChar(sql.MAX), finalProducts)
         .query('UPDATE cart SET content = @content WHERE user_id = @userId');
     }
 
@@ -71,7 +70,7 @@ const controller = class CartController {
 
   // 🟢 Update cart
   async update(updateProduct, userId) {
-    await this.poolConnect;
+    const pool = await sql.connect(config.sqlCon);
 
     let cartData = await this.getContent(userId);
     let cartProducts = cartData.content;
@@ -94,9 +93,9 @@ const controller = class CartController {
       cartProducts.push(updateProduct);
     }
 
-    await this.pool.request()
-      .input('userId', sql.NVarChar, userId)
-      .input('content', sql.NVarChar, JSON.stringify(cartProducts))
+    await pool.request()
+      .input('userId', sql.Int, userId)
+      .input('content', sql.NVarChar(sql.MAX), JSON.stringify(cartProducts))
       .query('UPDATE cart SET content = @content WHERE user_id = @userId');
 
     return 'Cart updated!';
@@ -104,10 +103,10 @@ const controller = class CartController {
 
   // 🟢 Empty cart
   async empty(userId) {
-    await this.poolConnect;
+    const pool = await sql.connect(config.sqlCon);
 
-    await this.pool.request()
-      .input('userId', sql.NVarChar, userId)
+    await pool.request()
+      .input('userId', sql.Int, userId)
       .query('DELETE FROM cart WHERE user_id = @userId');
 
     return 'Cart emptied';

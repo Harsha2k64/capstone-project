@@ -1,67 +1,104 @@
+'use strict';
+
+const sql = require('mssql');
 const config = require('../config/app-config.js');
-const mysql = require('mysql2');
 
 const controller = class OrdersController {
-    constructor() {
-        this.con = mysql.createConnection(config.sqlCon);
-    }
 
-    create(orderData) {
-        return new Promise((resolve, reject) => {
-            this.con.query('INSERT INTO orders SET ?', orderData, function (err, result) {
-                if (err) reject(new Error('Database connection error'));
-                resolve(result.insertId);
-            });
-        });
-    }
+  // 🟢 Create order
+  async create(orderData) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
 
-    saveOrderProducts(orderId, cartContent) {
-        for (let i = 0; i < cartContent.length; i++) {
-            const format = ({ id, quantity, size }) => [orderId, parseInt(id), quantity, size];
-            cartContent[i] = format(cartContent[i]);
-        }
+      const result = await pool.request()
+        .input('customer_id', sql.Int, orderData.costumer_id)
+        .query(`
+          INSERT INTO orders (costumer_id)
+          OUTPUT INSERTED.id
+          VALUES (@customer_id)
+        `);
 
-        return new Promise((resolve, reject) => {
-            this.con.query('INSERT INTO orders_items VALUES ?', [cartContent], function (err, result) {
-                if (err) reject(new Error(err));
-                resolve(result);
-            });
-        });
-    }
+      return result.recordset[0].id;
 
-    getOrderWithItems(orderId) {
-        return new Promise((resolve, reject) => {
-            this.con.query(`
-                SELECT o.*, 
-                       p.title as product_name, 
-                       oi.quantity, 
-                       oi.size,
-                       s.price
-                FROM orders o
-                JOIN orders_items oi ON o.id = oi.order_id
-                JOIN products p ON oi.item_id = p.id
-                JOIN sizes s ON s.product_id = p.id AND s.size = oi.size
-                WHERE o.id = ?
-            `, [orderId], function (err, result) {
-                if (err) reject(new Error(err));
-                resolve(result);
-            });
-        });
+    } catch (err) {
+      throw err;
     }
+  }
 
-    getAllOrders() {
-        return new Promise((resolve, reject) => {
-            this.con.query(`
-                SELECT o.*, u.name as customer_name, u.email as customer_email
-                FROM orders o
-                JOIN users u ON o.costumer_id = u.id
-                ORDER BY o.created_at DESC
-            `, function (err, result) {
-                if (err) reject(new Error(err));
-                resolve(result);
-            });
-        });
+  // 🟢 Save order items
+  async saveOrderProducts(orderId, cartContent) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      for (const item of cartContent) {
+        await pool.request()
+          .input('order_id', sql.Int, orderId)
+          .input('item_id', sql.Int, parseInt(item.id))
+          .input('quantity', sql.Int, item.quantity)
+          .input('size', sql.NVarChar, item.size)
+          .query(`
+            INSERT INTO orders_items (order_id, item_id, quantity, size)
+            VALUES (@order_id, @item_id, @quantity, @size)
+          `);
+      }
+
+      return 'Order items saved';
+
+    } catch (err) {
+      throw err;
     }
-}
+  }
+
+  // 🟢 Get order with items
+  async getOrderWithItems(orderId) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      const result = await pool.request()
+        .input('orderId', sql.Int, orderId)
+        .query(`
+          SELECT 
+            o.id,
+            o.costumer_id,
+            p.title AS product_name,
+            oi.quantity,
+            oi.size,
+            s.price
+          FROM orders o
+          JOIN orders_items oi ON o.id = oi.order_id
+          JOIN products p ON oi.item_id = p.id
+          JOIN sizes s ON s.product_id = p.id AND s.size = oi.size
+          WHERE o.id = @orderId
+        `);
+
+      return result.recordset;
+
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // 🟢 Get all orders (Admin)
+  async getAllOrders() {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      const result = await pool.request().query(`
+        SELECT 
+          o.*, 
+          u.name AS customer_name, 
+          u.email AS customer_email
+        FROM orders o
+        JOIN users u ON o.costumer_id = u.id
+        ORDER BY o.id DESC
+      `);
+
+      return result.recordset;
+
+    } catch (err) {
+      throw err;
+    }
+  }
+};
 
 module.exports = controller;

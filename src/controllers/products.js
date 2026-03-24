@@ -1,130 +1,190 @@
 'use strict';
 
-const config = require('../config/app-config.js');
-const mysql  = require('mysql2');
+const sql = require('mssql');
+const config = require('../config/app-config');
 
 const controller = class ProductsController {
-  constructor() {
-    this.pool = mysql.createPool(config.sqlCon).promise();
-  }
 
-  getAll() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const [rows] = await this.pool.query('SELECT * FROM products');
-        if (rows.length < 1) reject(new Error('No registered products'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
-  }
+  async getAll() {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+      const result = await pool.request().query('SELECT * FROM products');
 
-  getAllWithSizes() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const [rows] = await this.pool.query(
-          'SELECT * FROM sizes JOIN products ON sizes.product_id = products.id'
-        );
-        if (rows.length < 1) reject(new Error('No registered products'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
-  }
+      if (result.recordset.length < 1) {
+        throw new Error('No registered products');
+      }
 
-  getProduct(id) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // FIXED: parameterised — was vulnerable to SQL injection
-        const [rows] = await this.pool.query(
-          'SELECT * FROM products JOIN sizes ON products.id = sizes.product_id WHERE products.id = ?',
-          [id]
-        );
-        if (rows.length < 1) reject(new Error('Product not registered'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
-  }
-
-  getByIdArray(idList) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // idList is already a comma-separated string of safe integers
-        const [rows] = await this.pool.query(
-          `SELECT id, title, sizes.size, sizes.price
-           FROM products JOIN sizes ON products.id = sizes.product_id
-           WHERE id IN (${idList})`
-        );
-        if (!rows) reject(new Error('Products not registered'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
-  }
-
-  checkStock(id, size) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // FIXED: parameterised — was vulnerable to SQL injection
-        const [rows] = await this.pool.query(
-          'SELECT stock FROM sizes WHERE product_id = ? AND size = ?',
-          [id, size]
-        );
-        if (rows.length < 1) reject(new Error('Product not registered'));
-        else resolve(rows[0]);
-      } catch (err) { reject(err); }
-    });
-  }
-
-  async updateAllDetails(product, sizes, id) {
-    await this.updateProduct(product, id);
-    for (const size of sizes) {
-      await this.updateSizes(size, id);
+      return result.recordset;
+    } catch (err) {
+      throw err;
     }
-    return 'Product updated successfully!';
   }
 
-  updateProduct(product, id) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        await this.pool.query('UPDATE products SET ? WHERE id = ?', [product, id]);
-        resolve();
-      } catch (err) { reject(err); }
-    });
+  async getAllWithSizes() {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+      const result = await pool.request().query(`
+        SELECT * 
+        FROM sizes 
+        JOIN products ON sizes.product_id = products.id
+      `);
+
+      if (result.recordset.length < 1) {
+        throw new Error('No registered products');
+      }
+
+      return result.recordset;
+    } catch (err) {
+      throw err;
+    }
   }
 
-  updateSizes(size, id) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        await this.pool.query(
-          'UPDATE sizes SET ? WHERE product_id = ? AND size = ?',
-          [size, id, size.size]
-        );
-        resolve();
-      } catch (err) { reject(err); }
-    });
+  async getProduct(id) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`
+          SELECT * 
+          FROM products 
+          JOIN sizes ON products.id = sizes.product_id 
+          WHERE products.id = @id
+        `);
+
+      if (result.recordset.length < 1) {
+        throw new Error('Product not registered');
+      }
+
+      return result.recordset;
+    } catch (err) {
+      throw err;
+    }
   }
 
-  getPaginated(page) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const [rows] = await this.pool.query(
-          'SELECT * FROM products ORDER BY id ASC LIMIT 3 OFFSET ?',
-          [page * 3]
-        );
-        if (rows.length < 1) reject(new Error('No more products'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
+  async getByIdArray(idList) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      const result = await pool.request().query(`
+        SELECT products.id, products.title, sizes.size, sizes.price
+        FROM products 
+        JOIN sizes ON products.id = sizes.product_id
+        WHERE products.id IN (${idList})
+      `);
+
+      return result.recordset;
+    } catch (err) {
+      throw err;
+    }
   }
 
-  outOfStock() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const [rows] = await this.pool.query(
-          'SELECT * FROM sizes RIGHT JOIN products ON sizes.product_id = products.id WHERE sizes.stock = 0'
-        );
-        if (rows.length < 1) reject(new Error('All products in stock!'));
-        else resolve(rows);
-      } catch (err) { reject(err); }
-    });
+  async checkStock(id, size) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .input('size', sql.NVarChar, size)
+        .query(`
+          SELECT stock 
+          FROM sizes 
+          WHERE product_id = @id AND size = @size
+        `);
+
+      if (result.recordset.length < 1) {
+        throw new Error('Product not registered');
+      }
+
+      return result.recordset[0];
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async updateProduct(product, id) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      await pool.request()
+        .input('id', sql.Int, id)
+        .input('title', sql.NVarChar, product.title)
+        .input('description', sql.NVarChar, product.description)
+        .query(`
+          UPDATE products 
+          SET title = @title, description = @description
+          WHERE id = @id
+        `);
+
+      return;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async updateSizes(size, id) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      await pool.request()
+        .input('id', sql.Int, id)
+        .input('size', sql.NVarChar, size.size)
+        .input('price', sql.Decimal(10,2), size.price)
+        .input('stock', sql.Int, size.stock)
+        .query(`
+          UPDATE sizes 
+          SET price = @price, stock = @stock
+          WHERE product_id = @id AND size = @size
+        `);
+
+      return;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async getPaginated(page) {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      const offset = page * 3;
+
+      const result = await pool.request()
+        .input('offset', sql.Int, offset)
+        .query(`
+          SELECT * 
+          FROM products 
+          ORDER BY id ASC
+          OFFSET @offset ROWS FETCH NEXT 3 ROWS ONLY
+        `);
+
+      if (result.recordset.length < 1) {
+        throw new Error('No more products');
+      }
+
+      return result.recordset;
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  async outOfStock() {
+    try {
+      const pool = await sql.connect(config.sqlCon);
+
+      const result = await pool.request().query(`
+        SELECT * 
+        FROM sizes 
+        RIGHT JOIN products ON sizes.product_id = products.id 
+        WHERE sizes.stock = 0
+      `);
+
+      if (result.recordset.length < 1) {
+        throw new Error('All products in stock!');
+      }
+
+      return result.recordset;
+    } catch (err) {
+      throw err;
+    }
   }
 };
 
