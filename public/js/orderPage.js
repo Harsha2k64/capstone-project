@@ -22,7 +22,7 @@ for (let addBtn of addButtons) {
         const id = div.dataset.product;
         const quantity = parseInt(counter.textContent);
 
-        var stockCheck = new Request(`/ajax/checkStock?size=${size}&id=${id}`, {method: 'GET'});
+        var stockCheck = new Request(`http://10.128.0.2:8080/ajax/checkStock?size=${size}&id=${id}`, {method: 'GET'});
         fetch(stockCheck)
         .then(response => response.json())
         .then(data => {
@@ -66,7 +66,7 @@ document.querySelector('#cartAdd').addEventListener('click', () => {
     }
 
     if (addToCart.length > 0) {
-        var stockCheck = new Request('/ajax/addToCart', {
+        var stockCheck = new Request('http://10.128.0.2:8080/ajax/addToCart', {
             headers: { "Content-Type": "application/json" },
             method: 'POST',
             body: JSON.stringify({'addToCart':addToCart})

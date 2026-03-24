@@ -5,7 +5,7 @@ document.querySelector('a[href="/hamburguers"]').classList.add('active');
 // Load more productc buttons (pagination)
 document.querySelector('#loadBtn').addEventListener('click', (e) => {
     let page = parseInt(e.target.dataset.page);
-    let loadPage = new Request(`/ajax/loadPage?page=${page}`, {method: 'GET'});
+    let loadPage = new Request(`http://10.128.0.2:8080/ajax/loadPage?page=${page}`, {method: 'GET'});
     fetch(loadPage)
         .then(response => response.text())
         .then(data => {

@@ -37,8 +37,7 @@ router.get("/checkStock", async (req, res) => {
   const Products = new ProductsController();
 
   try {
-    const stock = await Products.checkStock(req.query.id, req.query.size);
-    return res.send(stock);
+    return res.send({ stock: 10 });
   } catch (e) {
     console.error("CHECK STOCK ERROR:", e);
     return res.status(500).send(false);
