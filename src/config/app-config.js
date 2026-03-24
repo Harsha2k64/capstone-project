@@ -1,6 +1,5 @@
 console.log('=== DEBUG ENV ===');
-console.log('DATABASE_HOST:', process.env.DATABASE_HOST);
-console.log('DATABASE_USER:', process.env.DATABASE_USER);
+console.log('DB_HOST:', process.env.DB_HOST);
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('================');
 
@@ -16,30 +15,22 @@ const config = {
   views:       path.join(__dirname, '/../views'),
   controllers: path.join(__dirname, '/../controllers'),
 
-  // ── MySQL / Cloud SQL ──────────────────────────────
+  // ✅ SQL SERVER CONFIG (REPLACED ONLY THIS PART)
   sqlCon: {
-    user:     process.env.DATABASE_USER || 'root',
-    password: process.env.DATABASE_PASS || '',
-    database: process.env.DATABASE_NAME || 'ecommerce',
-    charset:  'utf8mb4',
-    waitForConnections: true,
-    connectionLimit:    10,
-    queueLimit:         0,
-
-    // ✅ TCP for Cloud Run (works reliably)
-    host: process.env.DATABASE_HOST || '127.0.0.1',
+    user: 'sqlserver',
+    password: 'Dontask.123',
+    server: process.env.DB_HOST,   // Cloud SQL private IP
+    database: 'ecommerceserver',
+    options: {
+      encrypt: true,
+      trustServerCertificate: true
+    }
   },
 
-  populateCon: {
-    host:            process.env.DATABASE_HOST || '127.0.0.1',
-    user:            process.env.DATABASE_USER || 'root',
-    password:        process.env.DATABASE_PASS || '',
-    database:        process.env.DATABASE_NAME || 'ecommerce',
-    charset:         'utf8mb4',
-    multipleStatements: true,
-  },
+  // ❌ REMOVE populateCon (MySQL only)
+  // (delete this block completely)
 
-  // ── GCP ───────────────────────────────────────────
+  // ── GCP (KEEP SAME) ───────────────────────────
   gcp: {
     projectId:     process.env.GCP_PROJECT_ID      || '',
     region:        process.env.GCP_REGION          || 'us-central1',
