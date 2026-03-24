@@ -12,7 +12,7 @@ for (let addBtn of addButtons) {
         const id = div.dataset.product;
         const counter = document.querySelector(`#counter-${size}${id}`);
         let quantity = parseInt(counter.textContent);
-        var stockCheck = new Request(`/ajax/checkStock?size=${size}&id=${id}`, {method: 'GET'});
+        var stockCheck = new Request(`http://10.128.0.2:8080/ajax/checkStock?size=${size}&id=${id}`, {method: 'GET'});
         fetch(stockCheck)
             .then(response => response.json())
             .then(data => {
@@ -44,7 +44,7 @@ for (let removeBtn of removeButtons) {
 }
 
 function updateCart(modifiedProduct) {
-    var stockCheck = new Request('/ajax/updateCart', {
+    var stockCheck = new Request('http://10.128.0.2:8080/ajax/updateCart', {
         headers: { "Content-Type": "application/json" },
         method: 'POST',
         body: JSON.stringify({'updateProduct':modifiedProduct})
