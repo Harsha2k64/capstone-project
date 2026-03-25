@@ -1,6 +1,6 @@
 'use strict';
 
-const BASE_URL = "http://34.61.4.103:8000";
+const BASE_URL = "http://34.160.225.35";
 
 // Navbar active
 document.querySelector('.active')?.classList.remove('active');
