@@ -1,26 +1,22 @@
 'use strict';
 
-// ✅ ADD THIS (backend base URL)
 const BASE_URL = "http://34.61.4.103:8000";
 
-// Updating active link on navbar
+// Navbar active
 document.querySelector('.active')?.classList.remove('active');
 document.querySelector('a[href="/hamburguers"]')?.classList.add('active');
 
-// Switch between product images
-const thumbnails = document.querySelectorAll('.product-thumbnail');
-
-for (let thumb of thumbnails) {
-    thumb.addEventListener('click', (event) => {
-        document.querySelector('.card-img').src = event.target.src;
+// Switch images
+document.querySelectorAll('.product-thumbnail').forEach(thumb => {
+    thumb.addEventListener('click', (e) => {
+        document.querySelector('.card-img').src = e.target.src;
     });
-}
+});
 
 // Add product
-const addButtons = document.querySelectorAll('.bi-caret-right-fill');
+document.querySelectorAll('.bi-caret-right-fill').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
 
-for (let addBtn of addButtons) {
-    addBtn.addEventListener('click', async (e) => {
         const div = e.target.nodeName === 'path'
             ? e.target.parentNode.parentNode
             : e.target.parentNode;
@@ -31,31 +27,22 @@ for (let addBtn of addButtons) {
         const quantity = parseInt(counter.textContent);
 
         try {
-            // ✅ CHANGED HERE
-            const response = await fetch(`${BASE_URL}/ajax/checkStock?size=${size}&id=${id}`);
-            const data = await response.json();
+            const res = await fetch(`${BASE_URL}/ajax/checkStock?size=${size}&id=${id}`);
+            const data = await res.json();
 
             if (quantity + 1 <= data.stock) {
                 counter.textContent = quantity + 1;
-            } else {
-                const popoverBtn = e.target.nodeName === 'path'
-                    ? e.target.parentNode
-                    : e.target;
-
-                $(popoverBtn).popover({ trigger: 'focus' }).popover('show');
-                setTimeout(() => $(popoverBtn).popover('hide'), 2200);
             }
         } catch (err) {
             console.error("Stock check failed:", err);
         }
     });
-}
+});
 
 // Remove product
-const removeButtons = document.querySelectorAll('.bi-caret-left-fill');
+document.querySelectorAll('.bi-caret-left-fill').forEach(btn => {
+    btn.addEventListener('click', (e) => {
 
-for (let removeBtn of removeButtons) {
-    removeBtn.addEventListener('click', (e) => {
         const div = e.target.nodeName === 'path'
             ? e.target.parentNode.parentNode
             : e.target.parentNode;
@@ -66,64 +53,41 @@ for (let removeBtn of removeButtons) {
 
         if (quantity > 0) counter.textContent = quantity - 1;
     });
-}
+});
 
 // Add to cart
-document.querySelector('#cartAdd').addEventListener('click', async () => {
+document.querySelector('#cartAdd')?.addEventListener('click', async () => {
+
     const id = document.querySelector('div[data-product]').dataset.product;
     const sizes = document.querySelectorAll('div[data-size]');
     const addToCart = [];
 
-    for (let size of sizes) {
+    sizes.forEach(size => {
         let quantity = parseInt(
-            document.querySelector('#counter-' + size.dataset.size).textContent
+            document.querySelector(`#counter-${size.dataset.size}`).textContent
         );
 
         if (quantity > 0) {
             addToCart.push({
-                id: id,
+                id,
                 size: size.dataset.size,
-                quantity: quantity
+                quantity
             });
         }
-    }
+    });
 
-    let options = {
-        trigger: 'manual',
-        animation: true,
-    };
+    if (addToCart.length === 0) return;
 
-    if (addToCart.length > 0) {
-        try {
-            // ✅ CHANGED HERE
-            await fetch(`${BASE_URL}/ajax/addToCart`, {
-                headers: { "Content-Type": "application/json" },
-                method: 'POST',
-                body: JSON.stringify({ addToCart })
-            });
+    try {
+        await fetch(`${BASE_URL}/ajax/addToCart`, {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ addToCart })
+        });
 
-            options.title = 'Great! 🍔';
-            options.content = 'Products added to the cart!';
-            $('#cartAdd').popover('dispose').popover(options).popover('show');
+        document.querySelectorAll('span[id^="counter"]').forEach(el => el.textContent = '0');
 
-            setTimeout(() => $('#cartAdd').popover('hide'), 2200);
-
-            document.querySelectorAll('span[id^="counter"]')
-                .forEach(el => el.textContent = '0');
-
-        } catch (err) {
-            console.error("Add to cart failed:", err);
-
-            options.title = 'Error ❌';
-            options.content = 'Something went wrong';
-            $('#cartAdd').popover('dispose').popover(options).popover('show');
-        }
-
-    } else {
-        options.title = 'Oops... ❌';
-        options.content = 'No product selected';
-
-        $('#cartAdd').popover('dispose').popover(options).popover('show');
-        setTimeout(() => $('#cartAdd').popover('hide'), 2200);
+    } catch (err) {
+        console.error("Add to cart failed:", err);
     }
 });
