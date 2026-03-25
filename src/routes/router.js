@@ -8,8 +8,10 @@ const compression = require('compression');
 const rateLimit   = require('express-rate-limit');
 const logger      = require('../config/logger');
 const config      = require('../config/app-config.js');
+const cors        = require('cors');
 
 const app = express();
+app.use(cors());
 
 app.use(express.json());
 app.set('view engine', 'ejs');

@@ -1,5 +1,8 @@
 'use strict';
 
+// ✅ ADD THIS (backend base URL)
+const BASE_URL = "http://34.61.4.103:8000";
+
 // Updating active link on navbar
 document.querySelector('.active')?.classList.remove('active');
 document.querySelector('a[href="/hamburguers"]')?.classList.add('active');
@@ -9,7 +12,8 @@ document.querySelector('#loadBtn').addEventListener('click', async (e) => {
     let page = parseInt(e.target.dataset.page);
 
     try {
-        const response = await fetch(`/ajax/loadPage?page=${page}`);
+        // ✅ CHANGED HERE
+        const response = await fetch(`${BASE_URL}/ajax/loadPage?page=${page}`);
         const data = await response.text();
 
         if (!data.includes('false')) {

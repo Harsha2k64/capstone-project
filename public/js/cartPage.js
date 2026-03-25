@@ -1,5 +1,8 @@
 'use strict';
 
+// ✅ ADD THIS (backend base URL)
+const BASE_URL = "http://34.61.4.103:8000";
+
 // Updating active link on navbar
 document.querySelector('.active')?.classList.remove('active');
 document.querySelector('a[href="/hamburguers"]')?.classList.add('active');
@@ -19,7 +22,8 @@ for (let addBtn of addButtons) {
         let quantity = parseInt(counter.textContent);
 
         try {
-            const response = await fetch(`/ajax/checkStock?size=${size}&id=${id}`);
+            // ✅ CHANGED HERE
+            const response = await fetch(`${BASE_URL}/ajax/checkStock?size=${size}&id=${id}`);
             const data = await response.json();
 
             if (quantity + 1 <= data.stock) {
@@ -60,7 +64,8 @@ for (let removeBtn of removeButtons) {
 // ✅ FIXED API CALL
 async function updateCart(modifiedProduct) {
     try {
-        await fetch('/ajax/updateCart', {
+        // ✅ CHANGED HERE
+        await fetch(`${BASE_URL}/ajax/updateCart`, {
             headers: { "Content-Type": "application/json" },
             method: 'POST',
             body: JSON.stringify({ updateProduct: modifiedProduct })
