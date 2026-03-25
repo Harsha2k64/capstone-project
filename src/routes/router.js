@@ -49,10 +49,9 @@ app.get('/health', (req, res) => {
 });
 
 
-// ✅ Readiness check (NO REDIS)
+// ✅ Readiness check
 app.get('/readiness', async (req, res) => {
   try {
-    // You can optionally test DB here if needed
     res.status(200).json({ status: 'ready' });
   } catch (err) {
     res.status(503).json({ status: 'not ready', error: err.message });
@@ -60,16 +59,23 @@ app.get('/readiness', async (req, res) => {
 });
 
 
+// 🔥 IMPORTANT FIX (FOR LOAD BALANCER)
+app.get('/', (req, res) => {
+  res.status(200).send('Backend OK 🚀');
+});
+
+
 // Static files
 app.use(express.static(config.root));
-
 app.use(express.urlencoded({ extended: true }));
 
+
 // Routes
-app.use('/',          require('./main.js'));
 app.use('/login',     require('./login.js'));
 app.use('/dashboard', require('./dashboard.js'));
 app.use('/ajax',      require('./ajax.js'));
+app.use('/',          require('./main.js')); // keep this AFTER "/" fix
+
 
 const paymentController = require('../controllers/paymentController');
 app.post('/payment', paymentController.processPayment);
@@ -105,6 +111,5 @@ process.on('uncaughtException', (err) => {
   logger.error(`Uncaught exception: ${err.message}`);
   process.exit(1);
 });
-
 
 module.exports = app;
